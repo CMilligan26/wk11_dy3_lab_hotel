@@ -3,13 +3,15 @@ import java.util.HashMap;
 
 public class Hotel {
     private ArrayList<Guest> guests;
-    private ArrayList<Room> rooms;
-    private HashMap<Room, Integer> roomCapacities;
+    private ArrayList<Room> otherRooms;
+    private ArrayList<Room> bedrooms;
+    private ArrayList<Room> emptyBedrooms;
 
     public Hotel(){
         this.guests = new ArrayList<Guest>();
-        this.rooms = new ArrayList<Room>();
-        this.roomCapacities = new HashMap<Room, Integer>();
+        this.otherRooms = new ArrayList<Room>();
+        this.bedrooms = new ArrayList<Room>();
+        this.emptyBedrooms = new ArrayList<Room>();
     }
 
 
@@ -18,45 +20,59 @@ public class Hotel {
     }
 
     public int getNumberOfRooms() {
-        return this.rooms.size();
+        return this.otherRooms.size() + this.bedrooms.size();
     }
 
     public void addRoom(Room roomToAdd) {
-        this.rooms.add(roomToAdd);
-        this.updateRoomCapacities();
-    }
-
-    public void checkInGuest(Guest guestToCheckIn) {
-        this.updateRoomCapacities();
-        this.guests.add(guestToCheckIn);
-        this.updateRoomCapacities();
-    }
-
-    public void checkOutGuest() {
-        this.guests.remove(0);
-        this.updateRoomCapacities();
-    }
-
-    private void updateRoomCapacities(){
-        HashMap<Room, Integer> tempHash = new HashMap<Room, Integer>();
-        for (int i = 0; i < this.rooms.size() ; i++) {
-            int roomCapacity = this.rooms.get(i).getRemainingCapacity();
-            tempHash.put(this.rooms.get(i), roomCapacity);
+        if(roomToAdd.getType() != "Bedroom") {
+            this.otherRooms.add(roomToAdd);
         }
-        this.roomCapacities = tempHash;
+        else {
+            this.bedrooms.add(roomToAdd);
+        }
+        this.updateEmptyBedrooms();
     }
 
-    private Room findFirstAvailableRoom(){
-        Room availableRoom = null;
-        for (int i = 0; i < this.rooms.size(); i++) {
-            if (this.roomCapacities.get(this.rooms.get(i)) > 0) {
-                availableRoom = this.rooms.get(i);
-                break;
+    public void checkInGuestToBedroom(Guest guestToCheckIn) {
+        this.updateEmptyBedrooms();
+        if (this.emptyBedrooms.size() > 0) {
+            Room availableRoom = this.getEmptyRoom();
+            availableRoom.checkInGuest(guestToCheckIn);
+            guestToCheckIn.addRoom(availableRoom);
+            this.guests.add(guestToCheckIn);
+            this.updateEmptyBedrooms();
+        }
+    }
+
+    public void checkOutGuest(Guest guestToCheckOut) {
+        this.guests.remove(this.guests.indexOf(guestToCheckOut));
+        guestToCheckOut.getRoom().checkOutGuest();
+        this.updateEmptyBedrooms();
+    }
+
+    private void updateEmptyBedrooms(){
+        ArrayList<Room> tempRoomArrayList = new ArrayList<Room>();
+        for (int i = 0; i < this.bedrooms.size() ; i++) {
+            if(this.bedrooms.get(i).getNumberOfGuests() == 0) {
+                tempRoomArrayList.add(this.bedrooms.get(i));
             }
         }
-        return availableRoom;
+        this.emptyBedrooms = tempRoomArrayList;
     }
 
+    private Room getEmptyRoom(){
+        return this.emptyBedrooms.get(0);
+    }
 
+    public int getNumberOfEmptyRooms() {
+        return this.emptyBedrooms.size();
+    }
 
+    public void checkInGuestToOtherRoom(Room otherRoom, Guest guestToCheckIn) {
+        if (otherRoom.getRemainingCapacity() > 0) {
+            otherRoom.checkInGuest(guestToCheckIn);
+            guestToCheckIn.addRoom(otherRoom);
+            this.guests.add(guestToCheckIn);
+        }
+    }
 }
